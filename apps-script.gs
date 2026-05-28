@@ -121,9 +121,9 @@ function submitVote(params) {
       }
     }
     
-    // Save vote with HKT timestamp
+    // Save vote with HKT timestamp (NOT ISO)
     const voteId = Utilities.getUuid();
-    const votedAt = getCurrentHKT();
+    const votedAt = getCurrentHKTString();
     
     sheet.appendRow([
       voteId,
@@ -138,7 +138,7 @@ function submitVote(params) {
       message: "Vote recorded", 
       votes: votes,
       voteId: voteId,
-      votedAt: votedAt
+      votedAt: formatDateTimeForDisplay(votedAt)
     })).setMimeType(ContentService.MimeType.JSON);
     
   } catch(e) {
@@ -209,7 +209,7 @@ function getSummary() {
       totalVoters: totalVoters,
       totalMembers: pollContent.totalMembers,
       pendingCount: pendingCount,
-      lastUpdated: getCurrentHKTForDisplay()
+      lastUpdated: getCurrentHKTDisplayString()
     })).setMimeType(ContentService.MimeType.JSON);
     
   } catch(e) {
@@ -265,57 +265,114 @@ function getResponses() {
   }
 }
 
-// HKT Timezone functions
-function getCurrentHKT() {
+// ============ HKT TIMEZONE FUNCTIONS ============
+
+function getCurrentHKTString() {
+  // Get current time in HKT
   const now = new Date();
   const hkTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Hong_Kong"}));
-  return Utilities.formatDate(hkTime, "Asia/Hong_Kong", "yyyy-MM-dd HH:mm:ss") + " HKT";
+  
+  // Format: YYYY-MM-DD HH:MM:SS HKT
+  const year = hkTime.getFullYear();
+  const month = String(hkTime.getMonth() + 1).padStart(2, '0');
+  const day = String(hkTime.getDate()).padStart(2, '0');
+  const hours = String(hkTime.getHours()).padStart(2, '0');
+  const minutes = String(hkTime.getMinutes()).padStart(2, '0');
+  const seconds = String(hkTime.getSeconds()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} HKT`;
 }
 
-function getCurrentHKTForDisplay() {
+function getCurrentHKTDisplayString() {
+  // Get current time in HKT for display
   const now = new Date();
   const hkTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Hong_Kong"}));
-  return Utilities.formatDate(hkTime, "Asia/Hong_Kong", "MMM dd, yyyy HH:mm:ss") + " HKT";
+  
+  // Format: MMM DD, YYYY HH:MM:SS HKT
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[hkTime.getMonth()];
+  const day = hkTime.getDate();
+  const year = hkTime.getFullYear();
+  const hours = String(hkTime.getHours()).padStart(2, '0');
+  const minutes = String(hkTime.getMinutes()).padStart(2, '0');
+  const seconds = String(hkTime.getSeconds()).padStart(2, '0');
+  
+  return `${month} ${day}, ${year} ${hours}:${minutes}:${seconds} HKT`;
 }
 
 function formatDateTimeForDisplay(dateString) {
   if (!dateString) return "";
-  // If it already has HKT, format it nicely
+  
+  // If it's already in HKT format with HKT suffix
   if (dateString.toString().includes("HKT")) {
-    const datePart = dateString.toString().split(" ")[0];
-    const timePart = dateString.toString().split(" ")[1];
-    const date = new Date(datePart + "T" + timePart);
-    if (!isNaN(date.getTime())) {
-      return Utilities.formatDate(date, "Asia/Hong_Kong", "MMM dd, yyyy HH:mm:ss") + " HKT";
+    // Extract the date and time part
+    const hktStr = dateString.toString();
+    const dateTimePart = hktStr.replace(" HKT", "");
+    
+    // Parse the date (format: YYYY-MM-DD HH:MM:SS)
+    const parts = dateTimePart.split(' ');
+    if (parts.length === 2) {
+      const dateParts = parts[0].split('-');
+      const timeParts = parts[1].split(':');
+      
+      if (dateParts.length === 3 && timeParts.length === 3) {
+        const year = parseInt(dateParts[0]);
+        const month = parseInt(dateParts[1]) - 1;
+        const day = parseInt(dateParts[2]);
+        const hours = parseInt(timeParts[0]);
+        const minutes = parseInt(timeParts[1]);
+        const seconds = parseInt(timeParts[2]);
+        
+        const date = new Date(year, month, day, hours, minutes, seconds);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')} HKT`;
+      }
     }
   }
+  
+  // If it's ISO format, convert to HKT
+  try {
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) {
+      const hkTime = new Date(date.toLocaleString("en-US", {timeZone: "Asia/Hong_Kong"}));
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${months[hkTime.getMonth()]} ${hkTime.getDate()}, ${hkTime.getFullYear()} ${String(hkTime.getHours()).padStart(2, '0')}:${String(hkTime.getMinutes()).padStart(2, '0')}:${String(hkTime.getSeconds()).padStart(2, '0')} HKT`;
+    }
+  } catch(e) {}
+  
   return dateString.toString();
 }
 
 function formatDateForDisplay(value) {
   if (!value) return "";
-  if (value instanceof Date) {
-    return Utilities.formatDate(value, "Asia/Hong_Kong", "MMM dd, yyyy");
-  }
-  const str = value.toString().trim();
+  
   // Try to parse as date
-  const d = new Date(str);
-  if (!isNaN(d.getTime())) {
-    return Utilities.formatDate(d, "Asia/Hong_Kong", "MMM dd, yyyy");
+  try {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+    }
+  } catch(e) {}
+  
+  // If it's in YYYY-MM-DD format
+  if (value.toString().match(/^\d{4}-\d{2}-\d{2}/)) {
+    const parts = value.toString().split('-');
+    if (parts.length === 3) {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const month = months[parseInt(parts[1]) - 1];
+      const day = parseInt(parts[2]);
+      const year = parseInt(parts[0]);
+      return `${month} ${day}, ${year}`;
+    }
   }
-  return str;
+  
+  return value.toString();
 }
 
 function formatDate(value) {
-  if (!value) return "";
-  if (value instanceof Date) {
-    return Utilities.formatDate(value, "Asia/Hong_Kong", "MMM dd, yyyy");
-  }
-  const d = new Date(value);
-  if (!isNaN(d.getTime())) {
-    return Utilities.formatDate(d, "Asia/Hong_Kong", "MMM dd, yyyy");
-  }
-  return value.toString();
+  return formatDateForDisplay(value);
 }
 
 function setup() {
@@ -343,7 +400,39 @@ function setup() {
     Logger.log("Created Responses sheet");
   }
   
-  Logger.log("Setup complete. Questions and Responses sheets created with HKT timezone support.");
+  Logger.log("Setup complete. Current HKT time: " + getCurrentHKTDisplayString());
+}
+
+function convertExistingISODatesToHKT() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Responses");
+  if (!sheet) {
+    return ContentService.createTextOutput("Responses sheet not found.");
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  let convertedCount = 0;
+  
+  for (let i = 1; i < data.length; i++) {
+    const votedAt = data[i][3];
+    if (votedAt && votedAt.toString().includes("T") && votedAt.toString().includes("Z")) {
+      // This is ISO format, convert to HKT
+      const isoDate = new Date(votedAt);
+      const hkTime = new Date(isoDate.toLocaleString("en-US", {timeZone: "Asia/Hong_Kong"}));
+      const year = hkTime.getFullYear();
+      const month = String(hkTime.getMonth() + 1).padStart(2, '0');
+      const day = String(hkTime.getDate()).padStart(2, '0');
+      const hours = String(hkTime.getHours()).padStart(2, '0');
+      const minutes = String(hkTime.getMinutes()).padStart(2, '0');
+      const seconds = String(hkTime.getSeconds()).padStart(2, '0');
+      const hktString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds} HKT`;
+      
+      sheet.getRange(i + 1, 4).setValue(hktString);
+      convertedCount++;
+    }
+  }
+  
+  return ContentService.createTextOutput("Converted " + convertedCount + " ISO dates to HKT format.");
 }
 
 function addSampleQuestions() {
@@ -420,7 +509,8 @@ function debugSheetStructure() {
   }
   
   output += "\n=== HKT CURRENT TIME ===\n";
-  output += "Current HKT: " + getCurrentHKTForDisplay() + "\n";
+  output += "Current HKT (storage format): " + getCurrentHKTString() + "\n";
+  output += "Current HKT (display format): " + getCurrentHKTDisplayString() + "\n";
   
   return ContentService.createTextOutput(output);
 }
@@ -432,7 +522,8 @@ function testAPI() {
   let output = "=== API TEST ===\n\n";
   output += "GET POLL:\n" + poll.getContent() + "\n\n";
   output += "GET SUMMARY:\n" + summary.getContent() + "\n\n";
-  output += "Current HKT: " + getCurrentHKTForDisplay() + "\n";
+  output += "Current HKT (storage): " + getCurrentHKTString() + "\n";
+  output += "Current HKT (display): " + getCurrentHKTDisplayString() + "\n";
   
   return ContentService.createTextOutput(output);
 }
