@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0f1419">
+    <title>Event Voting</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 id="pageTitle">Event Voting</h1>
+            <p class="subtitle" id="pageSubtitle">Members vote for preferred venue & date</p>
+            
+            <div class="lang-switch">
+                <button class="lang-btn active" data-lang="en">English</button>
+                <button class="lang-btn" data-lang="zh">繁體中文</button>
+            </div>
+        </header>
+
+        <div id="loading" class="loading">Loading voting data...</div>
+
+        <div id="noData" class="card hidden">
+            <h2 id="noDataTitle">No Data Available</h2>
+            <p id="noDataMessage">Please check back later or contact the organizer.</p>
+            <button class="btn-secondary" id="retryBtn">Retry</button>
+        </div>
+
+        <div id="alreadyVoted" class="card hidden">
+            <h2 id="alreadyVotedTitle">✓ You've Already Voted</h2>
+            <p id="alreadyVotedMessage">Thank you for participating! Check the live results below.</p>
+        </div>
+
+        <div id="mainContent" class="hidden">
+            <!-- Summary Section -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <h2 id="summaryTitle" style="margin: 0">Live Results</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button type="button" class="btn-secondary" id="refreshBtn" style="flex: 0; min-width: auto; padding: 0.4rem 0.75rem; font-size: 0.85rem">
+                            🔄 Refresh
+                        </button>
+                        <button type="button" class="btn-secondary" id="viewMyVoteBtn" style="flex: 0; min-width: auto; padding: 0.4rem 0.75rem; font-size: 0.85rem">
+                            👤 My Vote
+                        </button>
+                    </div>
+                </div>
+                <div id="summaryContainer" class="summary-container">
+                    <div class="loading-small">Loading results...</div>
+                </div>
+                <div id="lastUpdated" class="last-updated"></div>
+            </div>
+
+            <!-- Voting Form Section -->
+            <div id="votingSection" class="card">
+                <h2 id="votingTitle">Cast Your Vote</h2>
+                <p id="votingNotice" class="notice">Select your preferred option for each category</p>
+                <form id="voteForm">
+                    <div id="pollQuestions"></div>
+                    
+                    <label for="memberName" id="nameLabel">Select Your Name *</label>
+                    <select id="memberName" name="memberName" required>
+                        <option value="">-- Select your name --</option>
+                    </select>
+                    
+                    <button type="submit" class="btn-primary" id="submitBtn">Submit Vote</button>
+                </form>
+            </div>
+        </div>
+
+        <footer id="footer">
+            Real-time voting · Auto-refreshes every 10 seconds
+        </footer>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="config.js"></script>
+    <script src="vote-app.js"></script>
+</body>
+</html>
