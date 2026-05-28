@@ -58,7 +58,7 @@ function getPoll() {
           let opt = value.toString().trim();
           // Format date if it's a date column
           if (category.toString().toLowerCase() === "date") {
-            opt = formatDate(opt);
+            opt = formatDateForDisplay(opt);
           }
           if (!options.includes(opt)) {
             options.push(opt);
@@ -121,9 +121,9 @@ function submitVote(params) {
       }
     }
     
-    // Save vote
+    // Save vote with HKT timestamp
     const voteId = Utilities.getUuid();
-    const votedAt = new Date().toISOString();
+    const votedAt = getCurrentHKT();
     
     sheet.appendRow([
       voteId,
@@ -137,7 +137,8 @@ function submitVote(params) {
       ok: true, 
       message: "Vote recorded", 
       votes: votes,
-      voteId: voteId
+      voteId: voteId,
+      votedAt: votedAt
     })).setMimeType(ContentService.MimeType.JSON);
     
   } catch(e) {
@@ -208,7 +209,7 @@ function getSummary() {
       totalVoters: totalVoters,
       totalMembers: pollContent.totalMembers,
       pendingCount: pendingCount,
-      lastUpdated: new Date().toLocaleString()
+      lastUpdated: getCurrentHKTForDisplay()
     })).setMimeType(ContentService.MimeType.JSON);
     
   } catch(e) {
@@ -247,7 +248,7 @@ function getResponses() {
         responses.push({
           memberName: data[i][1],
           votes: cleanVotes,
-          votedAt: data[i][3]
+          votedAt: formatDateTimeForDisplay(data[i][3])
         });
       }
     }
@@ -264,14 +265,55 @@ function getResponses() {
   }
 }
 
+// HKT Timezone functions
+function getCurrentHKT() {
+  const now = new Date();
+  const hkTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Hong_Kong"}));
+  return Utilities.formatDate(hkTime, "Asia/Hong_Kong", "yyyy-MM-dd HH:mm:ss") + " HKT";
+}
+
+function getCurrentHKTForDisplay() {
+  const now = new Date();
+  const hkTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Hong_Kong"}));
+  return Utilities.formatDate(hkTime, "Asia/Hong_Kong", "MMM dd, yyyy HH:mm:ss") + " HKT";
+}
+
+function formatDateTimeForDisplay(dateString) {
+  if (!dateString) return "";
+  // If it already has HKT, format it nicely
+  if (dateString.toString().includes("HKT")) {
+    const datePart = dateString.toString().split(" ")[0];
+    const timePart = dateString.toString().split(" ")[1];
+    const date = new Date(datePart + "T" + timePart);
+    if (!isNaN(date.getTime())) {
+      return Utilities.formatDate(date, "Asia/Hong_Kong", "MMM dd, yyyy HH:mm:ss") + " HKT";
+    }
+  }
+  return dateString.toString();
+}
+
+function formatDateForDisplay(value) {
+  if (!value) return "";
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, "Asia/Hong_Kong", "MMM dd, yyyy");
+  }
+  const str = value.toString().trim();
+  // Try to parse as date
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return Utilities.formatDate(d, "Asia/Hong_Kong", "MMM dd, yyyy");
+  }
+  return str;
+}
+
 function formatDate(value) {
   if (!value) return "";
   if (value instanceof Date) {
-    return value.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return Utilities.formatDate(value, "Asia/Hong_Kong", "MMM dd, yyyy");
   }
   const d = new Date(value);
   if (!isNaN(d.getTime())) {
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return Utilities.formatDate(d, "Asia/Hong_Kong", "MMM dd, yyyy");
   }
   return value.toString();
 }
@@ -290,6 +332,7 @@ function setup() {
     qSheet.appendRow(["Bill Chan", "Wins Japanese Restaurant", "2026-06-20"]);
     qSheet.appendRow(["Michelle Wong", "Grand Hyatt", "2026-06-27"]);
     qSheet.appendRow(["Kevin Leung", "The Peninsula", "2026-07-04"]);
+    Logger.log("Created Questions sheet with sample data");
   }
   
   // Create Responses sheet
@@ -297,9 +340,10 @@ function setup() {
   if (!rSheet) {
     rSheet = ss.insertSheet("Responses");
     rSheet.appendRow(["VoteId", "MemberName", "Votes", "VotedAt", "Status"]);
+    Logger.log("Created Responses sheet");
   }
   
-  return ContentService.createTextOutput("Setup complete. Questions and Responses sheets created.");
+  Logger.log("Setup complete. Questions and Responses sheets created with HKT timezone support.");
 }
 
 function addSampleQuestions() {
@@ -352,7 +396,6 @@ function debugSheetStructure() {
   
   if (qSheet) {
     output += "QUESTIONS SHEET:\n";
-    output += "  Location: " + qSheet.getParent().getUrl() + "\n";
     output += "  Last Row: " + qSheet.getLastRow() + "\n";
     output += "  Last Column: " + qSheet.getLastColumn() + "\n";
     const data = qSheet.getDataRange().getValues();
@@ -366,15 +409,18 @@ function debugSheetStructure() {
   
   if (rSheet) {
     output += "RESPONSES SHEET:\n";
-    output += "  Location: " + rSheet.getParent().getUrl() + "\n";
     output += "  Last Row: " + rSheet.getLastRow() + "\n";
     output += "  Last Column: " + rSheet.getLastColumn() + "\n";
     const data = rSheet.getDataRange().getValues();
     output += "  Headers: " + JSON.stringify(data[0]) + "\n";
     output += "  Total responses: " + (data.length - 1) + "\n";
+    output += "\n  Latest response timestamp: " + (data.length > 1 ? data[data.length-1][3] : "None") + "\n";
   } else {
     output += "RESPONSES SHEET: NOT FOUND\n";
   }
+  
+  output += "\n=== HKT CURRENT TIME ===\n";
+  output += "Current HKT: " + getCurrentHKTForDisplay() + "\n";
   
   return ContentService.createTextOutput(output);
 }
@@ -385,7 +431,8 @@ function testAPI() {
   
   let output = "=== API TEST ===\n\n";
   output += "GET POLL:\n" + poll.getContent() + "\n\n";
-  output += "GET SUMMARY:\n" + summary.getContent() + "\n";
+  output += "GET SUMMARY:\n" + summary.getContent() + "\n\n";
+  output += "Current HKT: " + getCurrentHKTForDisplay() + "\n";
   
   return ContentService.createTextOutput(output);
 }
