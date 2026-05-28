@@ -85,12 +85,15 @@
 
     function t(key, replacements = {}) {
         let text = translations[currentLang][key] || translations.en[key] || key;
-        Object.keys(replacements).forEach(r => {
-            // Replace {name} format
-            text = text.replace(new RegExp(`\\{${r}\\}`, 'g'), replacements[r]);
-            // Replace {{name}} format (for backward compatibility)
-            text = text.replace(new RegExp(`\\{\\{${r}\\}\\}`, 'g'), replacements[r]);
-        });
+        // Replace {name} with the actual name
+        if (replacements.name) {
+            text = text.replace('{name}', replacements.name);
+        }
+        // Also handle any other replacements
+        for (const [k, v] of Object.entries(replacements)) {
+            text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
+            text = text.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), v);
+        }
         return text;
     }
 
@@ -215,7 +218,7 @@
                 const percent = summary.totalVoters > 0 ? (data.count / summary.totalVoters) * 100 : 0;
                 html += `
                     <div class="result-item">
-                        <div class="result-label">
+                        <div class="result-header">
                             <span class="result-option">${escapeHtml(option)}</span>
                             <span class="result-count">${data.count} ${t("votes")} (${data.percentage}%)</span>
                         </div>
@@ -272,6 +275,7 @@
         
         // Show confirmation with the actual member name
         const confirmMessage = t("confirmSubmit", { name: memberName });
+        console.log("Confirm message:", confirmMessage); // Debug: check what's being shown
         if (!confirm(confirmMessage)) return;
         
         const submitBtn = $("#submitBtn");
