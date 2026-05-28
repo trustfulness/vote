@@ -86,7 +86,10 @@
     function t(key, replacements = {}) {
         let text = translations[currentLang][key] || translations.en[key] || key;
         Object.keys(replacements).forEach(r => {
-            text = text.replace(new RegExp(`{{${r}}}`, 'g'), replacements[r]);
+            // Replace {name} format
+            text = text.replace(new RegExp(`\\{${r}\\}`, 'g'), replacements[r]);
+            // Replace {{name}} format (for backward compatibility)
+            text = text.replace(new RegExp(`\\{\\{${r}\\}\\}`, 'g'), replacements[r]);
         });
         return text;
     }
@@ -241,7 +244,7 @@
     }
 
     async function submitVote(e) {
-        e.preventDefault(); // This prevents form from clearing
+        e.preventDefault();
         
         const memberName = $("#memberName").value;
         if (!memberName) {
@@ -267,8 +270,9 @@
             votes[category] = selected.value;
         }
         
-        // Confirm with user
-        if (!confirm(t("confirmSubmit", { name: memberName }))) return;
+        // Show confirmation with the actual member name
+        const confirmMessage = t("confirmSubmit", { name: memberName });
+        if (!confirm(confirmMessage)) return;
         
         const submitBtn = $("#submitBtn");
         submitBtn.disabled = true;
@@ -390,7 +394,6 @@
         try {
             await loadSummary();
             if (!hasVoted && pollData) {
-                // Only refresh form if needed, but preserve selections
                 await loadPoll();
                 if (pollData && !hasVoted) {
                     renderPollForm();
@@ -450,7 +453,6 @@
         // Remove any existing listener and add new one
         const form = $("#voteForm");
         if (form) {
-            // Remove old listener to avoid duplicates
             const newForm = form.cloneNode(true);
             form.parentNode.replaceChild(newForm, form);
             newForm.addEventListener("submit", submitVote);
