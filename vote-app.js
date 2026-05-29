@@ -2,7 +2,7 @@
     "use strict";
 
     const apiUrl = (window.ENROLL_CONFIG?.apiUrl || "").trim();
-    const refreshInterval = window.ENROLL_CONFIG?.refreshInterval || 10000;
+    const refreshInterval = window.ENROLL_CONFIG?.refreshInterval || 30000;
     const STORAGE_MEMBER = "vote_member_name";
     const STORAGE_LANG = "vote_language";
 
@@ -22,7 +22,7 @@
             submitBtn: "Submit Vote",
             refresh: "Refresh",
             myVote: "My Vote",
-            footer: "Real-time voting · Auto-refreshes every 10 seconds",
+            footer: "Real-time voting · Auto-refreshes",
             totalVoters: "Votes Cast",
             totalMembers: "Total Members",
             pendingVotes: "Pending",
@@ -55,7 +55,7 @@
             submitBtn: "提交投票",
             refresh: "刷新",
             myVote: "我的投票",
-            footer: "即時投票 · 每10秒自動刷新",
+            footer: "即時投票 · 自動刷新",
             totalVoters: "已投票人數",
             totalMembers: "總會員人數",
             pendingVotes: "未投票",
